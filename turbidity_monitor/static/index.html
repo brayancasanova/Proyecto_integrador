@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Monitoreo de Turbidez | ESP-CAM & YOLOv8</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f4f4f9;
+        color: #333;
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      h1 {
+        color: #2c3e50;
+      }
+      .container {
+        background: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        max-width: 800px;
+        width: 100%;
+      }
+      img {
+        max-width: 100%;
+        border-radius: 5px;
+        border: 2px solid #ddd;
+      }
+      .data-panel {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 20px;
+        padding: 15px;
+        background: #e8f4f8;
+        border-radius: 8px;
+      }
+      .data-box {
+        font-size: 1.2rem;
+      }
+      .data-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #e74c3c;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Monitoreo de Turbidez en Tiempo Real</h1>
+
+      <img src="/video_feed" alt="Stream ESP32-CAM" />
+
+      <div class="data-panel">
+        <div class="data-box">
+          <div>Nivel de Turbidez</div>
+          <div class="data-value" id="ntu-value">-- NTU</div>
+        </div>
+        <div class="data-box">
+          <div>Confianza del Modelo</div>
+          <div class="data-value" style="color: #27ae60" id="conf-value">
+            -- %
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Actualizar los datos numéricos desde la API cada 2 segundos
+      setInterval(async () => {
+        try {
+          const response = await fetch("/api/turbidity");
+          const data = await response.json();
+
+          if (data.ntu !== null) {
+            document.getElementById("ntu-value").innerText = `${data.ntu} NTU`;
+            document.getElementById("conf-value").innerText =
+              `${(data.confidence * 100).toFixed(1)} %`;
+          }
+        } catch (error) {
+          console.error("Error obteniendo datos:", error);
+        }
+      }, 2000);
+    </script>
+  </body>
+</html>
