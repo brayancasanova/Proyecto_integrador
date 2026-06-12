@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Sensores PRO</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #0a0e12;
+      --panel: #111820;
+      --border: rgba(255,255,255,0.06);
+      --accent: #00e5a0;
+      --accent2: #00aaff;
+      --danger: #ff3e3e;
+      --warn: #ffaa00;
+      --text: #e8edf2;
+      --muted: #6b7a8a;
+      --card-radius: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    .dash {
+      padding: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* HEADER */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 0.5px solid var(--border);
+    }
+
+    .logo { display: flex; align-items: center; gap: 12px; }
+
+    .logo-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .logo h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .logo span {
+      display: block;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .header-right { display: flex; align-items: center; gap: 12px; }
+
+    .status-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 4px 14px;
+      border-radius: 20px;
+      background: rgba(0,229,160,0.1);
+      color: var(--accent);
+      border: 0.5px solid rgba(0,229,160,0.3);
+      letter-spacing: 1px;
+    }
+
+    .status-badge.alarm {
+      background: rgba(255,62,62,0.1);
+      color: var(--danger);
+      border-color: rgba(255,62,62,0.4);
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .btn-sound {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 6px 16px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.04);
+      color: var(--muted);
+      border: 0.5px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 1px;
+    }
+
+    .btn-sound:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+    .btn-sound.active { color: var(--accent); border-color: rgba(0,229,160,0.3); background: rgba(0,229,160,0.06); }
+
+    /* ALERTA */
+    .alert-bar {
+      display: none;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      background: rgba(255,62,62,0.08);
+      border: 0.5px solid rgba(255,62,62,0.3);
+      color: #ff8080;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      margin-bottom: 20px;
+    }
+
+    .alert-bar.visible { display: flex; }
+    .alert-item { display: flex; align-items: center; gap: 6px; }
+    .alert-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--danger); flex-shrink: 0; }
+
+    /* MÉTRICAS */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .metric-card {
+      background: var(--panel);
+      border: 0.5px solid var(--border);
+      border-radius: var(--card-radius);
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent);
+      opacity: 0.5;
+      transition: opacity 0.3s;
+    }
+
+    .metric-card.alarm { border-color: rgba(255,62,62,0.4); }
+    .metric-card.alarm::before { background: var(--danger); opacity: 1; }
+
+    .metric-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .metric-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 34px;
+      font-weight: 600;
+      color: var(--accent);
+      line-height: 1;
+      transition: color 0.3s;
+    }
+
+    .metric-card.alarm .metric-value { color: var(--danger); }
+
+    .metric-unit {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--muted);
+      margin-left: 4px;
+    }
+
+    .metric-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    /* GRID PRINCIPAL */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 0.5px solid var(--border);
+      border-radius: var(--card-radius);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 12px 16px;
+      border-bottom: 0.5px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .panel-live {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .live-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse-dot 1.5s infinite;
+    }
+
+    /* CÁMARA */
+    .camera-box {
+      padding: 16px;
+      min-height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .camera-box img {
+      width: 100%;
+      border-radius: 6px;
+      display: block;
+    }
+
+    /* ESTADO */
+    .status-rows { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.02);
+      border: 0.5px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .status-row-key {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .status-row-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text);
+    }
+
+    /* GRÁFICAS */
+    .charts-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .chart-panel {
+      background: var(--panel);
+      border: 0.5px solid var(--border);
+      border-radius: var(--card-radius);
+      padding: 14px 16px;
+    }
+
+    .chart-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .metrics-row { grid-template-columns: 1fr; }
+      .main-grid { grid-template-columns: 1fr; }
+      .charts-row { grid-template-columns: 1fr; }
+      .dash { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<audio id="alarma" src="alert.mp3"></audio>
+
+<div class="dash">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-dot"></div>
+      <div>
+        <h1>monitoring</h1>
+        <span>intelligent program</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="status-badge" id="statusBadge">EN LÍNEA</span>
+      <button class="btn-sound" id="btnAudio">SND OFF</button>
+    </div>
+  </header>
+
+  <!-- ALERTAS -->
+  <div class="alert-bar" id="alertBar"></div>
+
+  <!-- MÉTRICAS -->
+  <div class="metrics-row">
+    <div class="metric-card" id="cardTAmb">
+      <div class="metric-label">Temp. Ambiente</div>
+      <div class="metric-value" id="valTAmb">—<span class="metric-unit">°C</span></div>
+      <div class="metric-time" id="timeLabel">Sin datos aún</div>
+    </div>
+    <div class="metric-card" id="cardTInt">
+      <div class="metric-label">Temp. Interna</div>
+      <div class="metric-value" id="valTInt">—<span class="metric-unit">°C</span></div>
+    </div>
+    <div class="metric-card" id="cardPH">
+      <div class="metric-label">pH</div>
+      <div class="metric-value" id="valPH">—</div>
+    </div>
+  </div>
+
+  <!-- CÁMARA + ESTADO -->
+  <div class="main-grid">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Cámara en vivo</span>
+        <span class="panel-live"><span class="live-dot"></span>LIVE</span>
+      </div>
+      <div class="camera-box">
+        <img id="camara" src="http://192.168.5.156/stream" alt="Stream de cámara"
+             onerror="this.style.display='none'; document.getElementById('camPlaceholder').style.display='flex';">
+        <div id="camPlaceholder" style="display:none; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:11px; width:100%; min-height:180px; border:0.5px dashed rgba(255,255,255,0.08); border-radius:6px;">
+          <svg width="32" height="24" viewBox="0 0 32 24" fill="none">
+            <rect x="0" y="4" width="22" height="18" rx="3" stroke="#6b7a8a" stroke-width="1.5"/>
+            <path d="M22 9l10-5v16l-10-5V9z" stroke="#6b7a8a" stroke-width="1.5"/>
+          </svg>
+          <span>192.168.0.25 / stream</span>
+          <span style="font-size:9px; opacity:0.5;">Sin señal de cámara</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Estado del sistema</span>
+      </div>
+      <div class="status-rows">
+        <div class="status-row">
+          <span class="status-row-key">Servidor API</span>
+          <span class="status-row-val" id="statusApi">VERIFICANDO...</span>
+        </div>
+        <div class="status-row">
+          <span class="status-row-key">Intervalo de lectura</span>
+          <span class="status-row-val">3 000 ms</span>
+        </div>
+        <div class="status-row">
+          <span class="status-row-key">Lecturas totales</span>
+          <span class="status-row-val" id="contLecturas">0</span>
+        </div>
+        <div class="status-row">
+          <span class="status-row-key">Alarma sonora</span>
+          <span class="status-row-val" id="statusSonido" style="color:var(--muted);">INACTIVA</span>
+        </div>
+        <div class="status-row">
+          <span class="status-row-key">Última lectura</span>
+          <span class="status-row-val" id="statusHora">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GRÁFICAS -->
+  <div class="charts-row">
+    <div class="chart-panel">
+      <div class="chart-title">Temp. Ambiente</div>
+      <div style="position:relative; height:150px;">
+        <canvas id="tempAmbChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-title">Temp. Interna</div>
+      <div style="position:relative; height:150px;">
+        <canvas id="tempIntChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-title">pH</div>
+      <div style="position:relative; height:150px;">
+        <canvas id="phChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── Estado ──────────────────────────────────────────────
+  let alarmaIntervalo = null;
+  let audioHabilitado = false;
+  let contLecturas = 0;
+
+  // ── Audio ────────────────────────────────────────────────
+  document.getElementById("btnAudio").addEventListener("click", () => {
+    const audio = document.getElementById("alarma");
+    audio.play().then(() => {
+      audio.pause();
+      audio.currentTime = 0;
+      audioHabilitado = true;
+      const btn = document.getElementById("btnAudio");
+      btn.textContent = "SND ON";
+      btn.classList.add("active");
+      document.getElementById("statusSonido").textContent = "ACTIVA";
+      document.getElementById("statusSonido").style.color = "var(--accent)";
+    }).catch(() => {
+      alert("Haz clic nuevamente para activar el audio");
+    });
+  });
+
+  // ── Configuración gráficas ────────────────────────────────
+  function makeChart(id, color) {
+    return new Chart(document.getElementById(id), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          data: [],
+          borderColor: color,
+          borderWidth: 1.5,
+          pointRadius: 2,
+          pointBackgroundColor: color,
+          fill: true,
+          backgroundColor: color + '18',
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            ticks: { font: { family: 'JetBrains Mono', size: 9 }, color: '#6b7a8a', maxTicksLimit: 5 },
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            border: { color: 'rgba(255,255,255,0.06)' }
+          },
+          y: {
+            ticks: { font: { family: 'JetBrains Mono', size: 9 }, color: '#6b7a8a', maxTicksLimit: 4 },
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            border: { color: 'rgba(255,255,255,0.06)' }
+          }
+        }
+      }
+    });
+  }
+
+  const tempAmbChart = makeChart("tempAmbChart", "#00e5a0");
+  const tempIntChart = makeChart("tempIntChart", "#00aaff");
+  const phChart      = makeChart("phChart",      "#ffaa00");
+
+  function pushChart(chart, label, value) {
+    chart.data.labels.push(label);
+    chart.data.datasets[0].data.push(value);
+    if (chart.data.labels.length > 10) {
+      chart.data.labels.shift();
+      chart.data.datasets[0].data.shift();
+    }
+    chart.update('none');
+  }
+
+  // ── Procesar datos ────────────────────────────────────────
+  function procesarDatos(ultimo) {
+    contLecturas++;
+    document.getElementById("contLecturas").textContent = contLecturas;
+    document.getElementById("statusApi").textContent = "CONECTADO";
+    document.getElementById("statusApi").style.color = "var(--accent)";
+
+    const tAmb = parseFloat(ultimo.temperatura_ambiente);
+    const tInt = parseFloat(ultimo.temperatura_interna);
+    const ph   = parseFloat(ultimo.ph);
+    const hora = ultimo.hora;
+
+    // Valores en tarjetas
+    document.getElementById("valTAmb").innerHTML = `${tAmb.toFixed(1)}<span class="metric-unit">°C</span>`;
+    document.getElementById("valTInt").innerHTML = `${tInt.toFixed(1)}<span class="metric-unit">°C</span>`;
+    document.getElementById("valPH").textContent  = ph.toFixed(2);
+    document.getElementById("timeLabel").textContent  = hora;
+    document.getElementById("statusHora").textContent = hora;
+
+    // Detectar alarmas
+    const alarmas = [];
+    const cardTAmb = document.getElementById("cardTAmb");
+    const cardTInt = document.getElementById("cardTInt");
+    const cardPH   = document.getElementById("cardPH");
+
+    cardTAmb.classList.remove("alarm");
+    cardTInt.classList.remove("alarm");
+    cardPH.classList.remove("alarm");
+
+    if (tAmb < 15 || tAmb > 25) { alarmas.push("Temp. ambiente fuera de rango"); cardTAmb.classList.add("alarm"); }
+    if (tInt < 15 || tInt > 25) { alarmas.push("Temp. interna fuera de rango");  cardTInt.classList.add("alarm"); }
+    if (ph < 6   || ph > 9)     { alarmas.push("pH fuera de rango");              cardPH.classList.add("alarm");   }
+
+    // Barra de alertas
+    const alertBar  = document.getElementById("alertBar");
+    const badge     = document.getElementById("statusBadge");
+
+    if (alarmas.length) {
+      alertBar.className = "alert-bar visible";
+      alertBar.innerHTML = alarmas.map(a =>
+        `<span class="alert-item"><span class="alert-dot"></span>${a}</span>`
+      ).join('');
+      badge.className = "status-badge alarm";
+      badge.textContent = "ALARMA";
+
+      // Sonido intermitente
+      if (audioHabilitado && !alarmaIntervalo) {
+        alarmaIntervalo = setInterval(() => {
+          const a = document.getElementById("alarma");
+          a.currentTime = 0;
+          a.play();
+        }, 2000);
+      }
+    } else {
+      alertBar.className = "alert-bar";
+      badge.className    = "status-badge";
+      badge.textContent  = "EN LÍNEA";
+      if (alarmaIntervalo) { clearInterval(alarmaIntervalo); alarmaIntervalo = null; }
+    }
+
+    // Actualizar gráficas
+    pushChart(tempAmbChart, hora, tAmb);
+    pushChart(tempIntChart, hora, tInt);
+    pushChart(phChart,      hora, ph);
+  }
+
+  // ── Fetch al servidor ─────────────────────────────────────
+  async function obtenerDatos() {
+    try {
+      const res  = await fetch("http://192.168.52.31:3000/data");
+      const data = await res.json();
+      if (data.length === 0) return;
+      procesarDatos(data[0]);
+    } catch (error) {
+      document.getElementById("statusApi").textContent = "SIN CONEXIÓN";
+      document.getElementById("statusApi").style.color = "var(--muted)";
+      console.error("Error al obtener datos:", error);
+    }
+  }
+
+  setInterval(obtenerDatos, 3000);
+  obtenerDatos();
+</script>
+
+</body>
+</html>
